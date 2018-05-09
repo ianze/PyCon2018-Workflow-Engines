@@ -1,0 +1,880 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Workflow Engines Up and Running</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/sky.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+    <style>
+        #left {
+            left: -8.33%;
+            text-align: left;
+            float: left;
+            width: 50%;
+            z-index: -10;
+        }
+
+        #right {
+            left: -10%;
+            top: 75px;
+            float: right;
+            text-align: left;
+            width: 50%;
+            z-index: -10;
+        }
+
+        .reveal pre code {
+            font-size: 1.5em;
+            line-height: 1.3;
+        }
+
+        .reveal pre {
+            width: 120%;
+            margin-left: -10%;
+            height: 80%;
+        }
+
+        .reveal p { 
+            text-align: left;
+            font-size: 80%;
+        }
+    </style>
+    <!-- Printing and PDF exports -->
+    <script>
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+        document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h2>Setup Instructions</h2>
+            <p>
+                <ul>
+                    <li>https://github.com/a-hacker/PyCon2018-Luigi</li><br>
+                    <li>https://github.com/ianze/PyCon2018-Airflow</li>
+                </ul>
+            </p>
+        </section>
+        <section>
+            <div id="left">
+                <b>Ian Zelikman</b>
+                <ul>
+                    <li>Python dev for 6+ years</li>
+                    <li>Backend web services</li>
+                    <li>ETL Process</li>
+                    <p>
+                        @izcoder<br/>
+                        ian.zelikman@gmail
+                    </p>
+                </ul>
+            </div>
+            <div id="right">
+                <b>Austin Hacker</b>
+                <ul>
+                    <li>Python programmer for 4+ years</li>
+                    <li>Workflow Automation</li>
+                    <br/>
+                </ul>
+                <p>
+                    explosivepyrounicorns@gmail
+                </p>
+            </div>
+        </section>
+        <section>
+            <h1>Intro</h1>
+            <img class="stretch" style="height: 609px; width: 512.77px;" src="img/example.png">
+            <aside class="notes">
+<b>Simplified and Generalized</b>
+The idea for this tutorial came as Austin and I were looking at different solutions to ETL jobs/workflow engines that
+to be utilized by our team.<br>
+This is an example of a DAG, a directed a cyclic graph we have in production.<br>
+The tools we will see give you the ability to construct these DAGs, monitor, recover from failure and manage dependency.<br>
+This tutorial will give you initial hands on experience on using these tools<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Structure</h2>
+            <aside class="notes">
+We hope you had opportunity to download the repos and install the requirements. If not you will have
+Have some additional time to do this.<br>
+The tutorial is split into two sections. In each section we will present the engine we are working with.<br>
+We will then have a series of lessons where in each lesson we will cover some theory and then you can practice<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Luigi</h2>
+            <ul>
+                <li>Designed by Spotify</li>
+                <li>Automate long-running processes</li>
+                <li>Support for the Hadoop ecosystem</li>
+            </ul>
+            <aside class="notes">
+Luigi started as an internal tool developed by Spotify to manage the plumbing associated with long-running hadoop jobs and other batch processing.<br>
+Open sourced in 2012.<br>
+Like other workflow engines at the time, Luigi provides built-in support for Hadoop jobs but is designed to be more general use<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Nitty Gritty</h2>
+            <ul>
+                <li>File-based</li>
+                <li>Visualiser Page</li>
+                <li>Scheduler and Workers</li>
+                <li>Object-Oriented Structure</li>
+            </ul>
+            <aside class="notes">
+Luigi uses files to trigger tasks and output data processing<br>
+While a task is running, a simple web UI is available to check on task progress<br>
+It is possible to run luigi pipelines with the local scheduler but the central scheduler is preffered.<br>
+Central scheduler is a single-threaded process that spawns workers when needed.<br>
+Tasks are specified using classes.<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Lesson 1</h2>
+            <p>
+                <b>https://github.com/a-hacker/PyTN2018-Luigi</b>
+                <br><br>
+                Run the hello_world dag and check the central scheduler<br><br>
+                <b>Note</b>: Run your dag with docker exec pycon2018luigi_scheduler_1 python3 dags/hello_world.py &lt;HelloWorldTask&gt;
+            </p>
+        </section>
+        <section>
+            <h2>Task Structure</h2>
+            <pre><code data-trim data-noescape>
+                class TaskClass(luigi.Task):
+                    def requires(self):
+                        #I specify dependencies for this task
+                        return AnotherTaskClass()
+                    def output(self):
+                        #I specify an output file for task data
+                        return luigi.LocalTarget("target_file")
+                    def run(self):
+                        #I run code!
+                        pass
+            </code></pre>
+        </section>
+        <section>
+            <h2>Running a Task</h2>
+            <pre><code data-trim data-noescape>
+                class TaskClass(luigi.Task):
+                    ...
+                    def run(self):
+                        data = ""
+                        with self.input().open('r') as foo:
+                            data = foo.read()
+                        processed_data = do_something(data)
+                        with self.output().open('w') as bar:
+                            bar.write(processed_data)
+            </code></pre>
+        </section>
+        <section>
+            <h2>External Tasks</h2>
+            <pre><code data-trim data-noescape>
+                class ExternalTaskClass(luigi.ExternalTask):
+                    def output(self):
+                        return luigi.LocalTarget("external_file.txt")
+            </code></pre>
+        </section>
+        <section>
+            <h2>Putting it Together</h2>
+            <pre><code data-trim data-noescape>
+                class ExternalTaskClass(luigi.ExternalTask):
+                    def output(self):
+                        return luigi.LocalTarget("external_file.txt")
+
+                class TaskClass(luigi.Task):
+                    def requires(self):
+                        return ExternalTaskClass()
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Lesson 2</h2>
+            <p>
+                Write your own dag to perform XKCD substitions on the input file.<br><br>
+                <b>Note</b>: Run your dag with docker exec pycon2018luigi_scheduler_1 python3 dags/part1.py &lt;YourTaskName&gt;
+            </p>
+        </section>
+        <section>
+            <h2>Parameterize Everything!</h2>
+            <pre><code data-trim data-noescape>
+                class TaskClass(luigi.Task):
+                    foo = luigi.Parameter(default="bar")
+
+                    def output(self):
+                        return luigi.LocalTarget("{}.txt"
+                            .format(self.foo))
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Available Param Types</h2>
+            <ul>
+                <li>BooleanParam</li>
+                <li>IntParam</li>
+                <li>DictParam</li>
+                <li>DateParam</li>
+                <li>ChoiceParam</li>
+                <li>...and many more</li>
+            </ul>
+        </section>
+        <section>
+            <h2>Passing params</h2>
+            <pre><code data-trim data-noescape>
+                class TaskClass(luigi.Task):
+                    foo = luigi.Parameter(default="bar")
+                ...
+                class DownStreamTask(luigi.Task):
+                    def requires(self):
+                        TaskClass(foo="baz")
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                python3 dagfile.py TaskClass --foo baz
+            </code></pre>
+        </section>
+        <section>
+            <h2>Lesson 3</h2>
+            <p>
+                <b>Add parameters to your DAG</b><br><br>
+                Support different substitutions to be used
+            </p>
+        </section>
+        <section>
+            <h2>Grow your dag</h2>
+            <pre><code data-trim data-noescape>
+                class DownStreamTask(luigi.Task):
+                    def requires(self):
+                        return [TaskClass(foo="bar"),
+                                TaskClass(foo="baz")]
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Arbitrary number of dependencies</h2>
+            <pre><code data-trim data-noescape>
+                class DownStreamTask(luigi.Task):
+                    dependencies = luigi.IntParameter(defaul=4)
+                    def requires(self):
+                        return [TaskClass(x)
+                            for x
+                            in range(0, self.dependencies)]
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>All you need is __iter__</h2>
+            <pre><code data-trim data-noescape>
+                class DownStreamTask(luigi.Task):
+                    def requires(self):
+                        return {'thing1': TaskClass(1),
+                                'thing2': TaskClass(2)}
+                    ...
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                class DownStreamTask(luigi.Task):
+                    def requires(self):
+                        return FirstTask(), SecondTask()
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Using multiple dependencies</h2>
+            <pre><code data-trim data-noescape>
+                class DownStreamTask(luigi.Task):
+                    def requires(self):
+                        return [TaskClass(foo="bar"),
+                                TaskClass(foo="baz")]
+                    def output(self):
+                        for dep in self.input():
+                            with dep.open():
+                                ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Read before you write</h2>
+            <ul>
+                <li>Tasks execute when dependency output file exists</li>
+                <li>hadoop.JobTask</li>
+            </ul>
+        </section>
+        <section>
+            <h2>Lesson 4</h2>
+            <p>
+                <b>Read Multiple Files</b><br><br>
+                Create tasks for each input file and create a unified output of substitutions
+                Try to dynamically create external tasks
+            </p>
+        </section>
+        <section>
+            <h2>Error!</h2>
+        </section>
+        <section>
+            <h2>Event Callbacks</h2>
+            <pre><code data-trim data-noescape>
+                @luigi.Task.event_handler(luigi.Event.SUCCESS)
+                def celebrate_success(task):
+                    #do a thing
+                    pass
+            </code></pre>
+        </section>
+        <section>
+            <h2>So close</h2>
+            <pre><code data-trim data-noescape>
+                @luigi.Task.event_handler(luigi.Event.FAILURE)
+                def mourn_failure(task, exception):
+                    #do a thing
+                    pass
+            </code></pre>
+        </section>
+        <section>
+            <h2>Narrow your scope</h2>
+            <pre><code data-trim data-noescape>
+                @TaskClass.event_handler(luigi.Event.FAILURE)
+                def mourn_failure(task, exception):
+                    #do a thing
+                    pass
+            </code></pre>
+        </section>
+        <section>
+            <h2>Maybe just try again?</h2>
+            <pre><code data-trim data-noescape>
+                class TaskClass(luigi.Task):
+                    retry_count = 5
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Lesson 5</h2>
+            <p>
+                <b>Recover from a failure</b><br><br>
+                Add an event handler when you can't read a file
+            </p>
+        </section>
+        <section>
+            <h2>Unit tests</h2>
+            <ul>
+                <li>Split out actual logic</li>
+                <li>Mocking Luigi is....possible</li>
+            </ul>
+        </section>
+        <section>
+            <h2>MockTarget</h2>
+            <pre><code data-trim data-noescape>
+                from luigi.mock import MockTarget
+                ...
+                class InputMock(YourInputTaskClass):
+                    def output(self):
+                        return MockTarget('dest.txt')
+                    ...
+            </code></pre>
+        </section>
+        <section>
+            <h2>Patch Downstream Tasks</h2>
+            <pre><code data-trim data-noescape>
+                @mock.patch('dags.example.DownstreamTask.requires')
+                def test_example(dt_req):
+                    dt_req.return_value = InputMock()
+            </code></pre>
+        </section>
+        <section>
+            <h2>Patch Downstream Tasks</h2>
+            <pre><code data-trim data-noescape>
+                @mock.patch('dags.example.DownstreamTask.output')
+                def test_example(dt_out):
+                    dt_out.return_value = luigi.LocalTarget(is_tmp=True)
+            </code></pre>
+        </section>
+        <section>
+            <h2>Bonus Lesson/Break</h2>
+            <p>
+                <b>Write some tests</b><br><br>
+                Test the code you just wrote.
+                Use the the test/hello_world_test.py as reference
+            </p>
+        </section>
+        <section>
+            <h4>Airflow</h4>
+            <ul>
+                <li>Originally by Airbnb</li>
+                <li>"programmatically author, schedule and monitor workflows"</li>
+                <li>Distributed</li>
+                <li>Not for data streaming</li>
+            </ul>
+            <aside class="notes">
+It was developed originally by Maxime Beauchemin at Airbnb. History: started in 2014, brought to Airbnb github in 2015.<br>
+Moved to Apache incubation (currently) in 2016.<br>
+By Authoring DAGs using python you will get great flexibility. With that Airflow gives you many features such as rich UI and scheduling tools.<br>
+As we will see was designed with multiple components that enable it to be very scalable and stable.<br>
+This is not a data streaming solution (Spark streaming, storm), similar solutions are Pinball, Oozie, Azkaban, and Luigi.
+            </aside>
+        </section>
+        <Section>
+            <h4>Airflow Components</h4>
+            <ul>
+                <li>UI</li>
+                <li>MetaData Database(Postgres)</li>
+                <li>Scheduler(Executor)</li>
+                <li>Workers</li>
+            </ul>
+            <aside class="notes">
+Airflow UI is a Flask application that is used to display, monitor and control our DAG execution.<br>
+Metadata database is used to store information about the current state of DAGs and tasks to facilitate UI presentation and scheduler operation<br>
+The scheduler is a python process that runs and is used to schedule DAG and tasks runs.<br>
+Executors: Local & sequential - mostly dev. Celery, Mesos, Dask - for scaling out and having workers. We will use celery to demonstrate it.
+The worker actually execute the python code that was defined.
+            </aside>
+        </Section>
+        <Section>
+            <h4>Airflow Demo</h4>
+            <aside class="notes">
+The main UI is on port 8080<br>
+Stats about the DAG run, Code, Graph.<br>
+Show details about a DAG that ran, code<br>
+Run a DAG and show logs etc.<br>
+Show the logs of a task that run.<br>
+Show components of our Docker setup and how we will work (DAGs directory, /tmp/work directory).<br>
+Expand on how each container is created.
+Show the flower UI - but won't need it in this tutorial.
+            </aside>
+        </Section>
+        <section>
+            <h4>Lesson 1 - Running Airflow</h4>
+            <p>
+                <b>https://github.com/ianze/PyCon2018-Airflow</b>
+                <br><br>
+                Verify all components of Airflow are working and you can run the sample DAG.<br><br>
+                Explore the UI and see information about the DAG run.<br><br>
+                <b>Bonus</b>: Update DAG code so that there are errors during a task run. See details of failed DAG run.
+            </p>
+        </section>
+        <section>
+            <h4>Airflow DAGs</h4>
+            <pre><code data-trim data-noescape>
+                default_args = {
+                    'owner': 'pycon',
+                    'start_date': datetime(2015, 6, 1),
+                }
+                dag = DAG('tutorial', default_args=default_args,
+                          schedule_interval=None)
+            </code></pre>
+        <aside class="notes">
+DAG - Directed Acyclic Graph. Each node on the Airflow DAG is a task with some logic to execute.<br>
+The only job Airflow has is know when to execute DAGs identify dependencies and execute tasks accordingly<br>
+These are called default_args b/c this is eventually passed to the tasks by the DAG. In order to avoid duplication<br>
+we specify it in DAG level. You must pass <b>owner</b> and <b>start_date</b>.<br>
+There are many more parameters you can pass: email, pool, priority, and_date. And some others we will see later.<br>
+That's it now you have see how you can define a DAG!<br>
+schedule_interval - Airflow ties the dag to scheduled run, if you don't set it to None the default is once a day!<br>
+During the tutorial I recommend to set it to None and trigger it manually.
+        </aside>
+        </section>
+    <section>
+        <section>
+            <h4>Airflow Tasks - Bash Operator</h4>
+            <pre><code data-trim data-noescape>
+                t1 = BashOperator(
+                    task_id='print_date',
+                    bash_command='date',
+                    dag=dag)
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                t2 = BashOperator(
+                    task_id='sleep',
+                    bash_command='sleep 5',
+                    dag=dag)
+
+                t2.set_upstream(t1)
+            </code></pre>
+        <aside class="notes">
+We have a DAG defined but it doesn't do much, right?<br>
+This is where operators come in. Here we instantiate a two bash operators and pass a bash command to execute.<br>
+Once an operator was instantiated it is now a task on the DAG. <br>
+We also define a dependency between our tasks by setting the first to be upstream from the second<br>
+        </aside>
+        </section>
+        <section>
+            <h4>Airflow Tasks - Python Operator</h4>
+            <pre><code data-trim data-noescape>
+                def print_context(ds, **kwargs):
+                    pprint(kwargs)
+                    print(ds)
+                    return 'Whatever you return gets printed in the logs'
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                run_this = PythonOperator(
+                    task_id='print_the_context',
+                    python_callable=print_context,
+                    dag=dag)
+            </code></pre>
+        <aside class="notes">
+Airflow comes with a bunch of built in Operator. This is an example of the Python operator where you just pass in <br>
+A python function.
+Other operators: Hive, Http (calls an endpoint), MySQL (runs a query), SlackPost.
+        </aside>
+        </section>
+        <section>
+            <h4>More Operators</h4>
+            <ul>
+                <li><b>HttpOperator</b> - Makes an Http call</li>
+                <li><b>PostgresOperator</b> - Executes Postgres SQL</li>
+                <li><b>Hive</b> - Executes hql code or Hive script</li>
+                <li><b>SparkSubmitOperator</b> - Kick off a Spark job</li>
+                <li> ... </li>
+            </ul>
+        </section>
+    </section>
+        <section>
+            <h4>Lesson 2 - First DAG</h4>
+            <p>
+                Construct a DAG with multiple tasks<br>
+                Find the most common baby name in the provided dataset<br><br>
+
+                <b>Instructions</b><br><br>
+                Baby names in the US(by year): <b>https://www.ssa.gov/oact/babynames/names.zip</b><br><br>
+                Dag must be placed in <b>dags</b> directory<br>
+                Place temporary files in: <b>/tmp/work</b>
+            </p>
+        </section>
+        <section>
+            <h4>Parallel Execution</h4>
+            <pre><code data-trim data-noescape>
+                for i in range(5):
+                    op_kwargs = {'task_num': i}
+                    PythonOperator(
+                        task_id='task-num-' + i
+                        <b>provide_context=True,</b>
+                        <b>op_kwargs=op_kwargs</b>
+                        python_callable=print_context,
+                        <b>pool='pool_key'</b>,
+                        dag=dag)
+            </code></pre>
+
+            <pre><code data-trim data-noescape>
+                def print_task_id(ds, **kwargs):
+                    print("task id {}".format(kwargs['ti'].task_id)
+                    print("task num {}".format(kwargs['task_num'])
+            </code></pre>
+<aside class="notes">
+This is where I find a lot of the power of defining your workflow using Python is. You are not limited to a static config file<br>
+The tasks can be very dynamic as you can see here in a loop.<br>
+Notice you need to give a unique name to each task. But you can also pass task specific information in <b>op_kwargs</b><br>
+it is important you do not reuse the op_kwargs between tasks to avoid aliasing (if the information changes).<br>
+You must set <b>provide_context=True</b> in order for op_kwargs to be passed.
+A pool will limit how many tasks can run in parallel. You can add a pool using the web UI but also using the CLI(demo)
+</aside>
+        </section>
+        <section>
+            <h4>Jinja2</h4>
+            <pre><code data-trim data-noescape>
+                templated_command = """
+                {% for i in range(5) %}
+                    echo "{{ ds }}"
+                    echo "{{ params.my_param }}"
+                {% endfor %}
+                """
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                BashOperator(
+                    task_id='templated',
+                    bash_command=templated_command,
+                    params={'my_param': 'Parameter I passed in'},
+                    dag=dag)
+            </code></pre>
+            <aside class="notes">
+                Jinja2 is probably the most popular template engine in Python. It is built into Airflow.<br>
+                Another great feature of Airflow is it has templating using Jinja2. It supports several pre-defined variables such
+                ds which you can see here. this is today time stamp. Other variables give information regarding the DAG, Task and other run information.<br>
+                As you can see in parameters you can pass your own parameters.<br>
+                Many of the Operators(Bash) support passing a template argument that Airflow will render for you. This comes in handy for such commands with bash or SQL<br>
+            </aside>
+        </section>
+        <section>
+            <h4>Lesson 3 - Parallelism in DAGs </h4>
+            <p>
+                Build a DAG that calculates most common names in 5 states<br>
+                Make the calculation as parallel as possible<br><br>
+
+                <b>Bonus:</b>Add the use of pools in order to restrict running up 2 tasks at a time<br><br>
+
+                <b>Instructions</b><br>
+                US baby names by state: https://www.ssa.gov/oact/babynames/state/namesbystate.zip
+            </p>
+        <aside class="notes">
+            Solve the exercise without the pools first.<br>
+            Don't forget to add the pool before running the exercise with pools<br>
+            example_python_operator.py
+        </aside>
+        </section>
+        <section>
+            <h4>Error Retries</h4>
+            <pre><code data-trim data-noescape>
+                default_args = {
+                    'email_on_retry': False,
+                    'retries': 2,
+                    'retry_delay': timedelta(seconds=10),
+                }
+            </code></pre>
+            <pre><code data-trim data-noescape>
+                BashOperator(
+                    task_id='sleep',
+                    bash_command='sleep 5',
+                    retries=5,
+                    dag=dag)
+            </code></pre>
+            <aside class="notes">
+                Sometimes they fail and will not recover but sometimes just a retry will help.<br>
+                You can see here that Airflow has built in support for this. You can define retries globally or you can define them per Task<br>
+                This makes your job much more stable and robust.
+            </aside>
+        </section>
+        <section>
+            <h4>Error Notifications</h4>
+            <pre><code data-trim data-noescape>
+                default_args = {
+                    'email': ['pycon2018@example.com'],
+                    'email_on_failure': True,
+                    'on_failure_callback': notify_error,
+                }
+            </code></pre>
+
+            <pre><code data-trim data-noescape>
+                def notify_error(context):
+                    # we can have more information here such as
+                    # even a full URL to the task failure
+                    message = "Failure executing task {} on DAG {}"
+                        .format(str(context['task'].task_id),
+                                str(context['dag'].dag_id))
+                    print(message)
+            </code></pre>
+            <aside class="notes">
+                Some tasks will fail in your jobs. As the amount of jobs grows you cannot monitor all of them<br>
+                You will need a way to get notifications of these failures. The email notifications are built in<br>
+                As you can see you can put your own completely custom logic to have some notifications of these errors.
+            </aside>
+        </section>
+        <section>
+            <h4>Lesson 4 - Errors</h4>
+            <p>
+                <b>Update your previous DAG:</b><br><br>
+                Add random file read errors so some tasks fail<br>
+                Retry the task until it succeeds<br><br>
+
+                <b>Instructions:</b><br>
+                You can use <b>pycon_utils.RandomFailOpen</b> as the regular python <b>open</b> to simulate random errors
+            </p>
+        </section>
+        <section>
+            <h4>CLI</h4>
+            <pre><code data-trim data-noescape>
+                # command layout: command subcommand dag_id task_id date
+
+                # testing print_date
+                airflow test first_dag test_task 2001-01-01
+            </code></pre>
+<aside class="notes">
+First, after writing a DAG you can just see there are no syntax errors by running that module.<br>
+After that if you setup up correctly you can also run it using the CLI either locally or on the server<br>
+By using the CLI and the `test` command this run will not be logged to the DB and just run locally<br>
+</aside>
+        </section>
+        <section>
+            <h4>Unit Test - Operators</h4>
+            <pre><code data-trim data-noescape>
+                from airflow.models import BaseOperator
+                from airflow.utils.decorators import apply_defaults
+            </code></pre>
+
+            <pre><code data-trim data-noescape>
+                class PyconOperator(BaseOperator):
+                    @apply_defaults
+                    def __init__(self, params,
+                            *args, **kwargs):
+                        self.params = params
+                        super(PyconOperator, self).__init__(
+                            *args, **kwargs)
+                    def execute(self, context):
+                        return "Pycon2018"
+            </code></pre>
+            <aside class="notes">
+                This is the most basic way to build your custom operator. You will have a similar init and the magic<br>
+                happens in the `execute`
+                apply_defaults -     Function decorator that Looks for an argument named "default_args", and
+                fills the unspecified arguments from it.<br>
+                You don't need to worry much about it just know this is what makes your class into a real operator you
+                can run inside of a DAG. Just inheriting from BaseOperator is not enough.
+            </aside>
+        </section>
+        <section>
+            <h4>Unit Test - Operators</h4>
+            <pre><code data-trim data-noescape>
+                from airflow.models import DAG, TaskInstance
+                from test_dag import PyconOperator
+            </code></pre>
+
+            <pre><code data-trim data-noescape>
+                class TestPyconOperator(TestCase):
+                    def test_execute(self):
+                        dag = DAG(dag_id='pycon_dag',
+                                  start_date=datetime.now())
+                        task = PyconOperator(dag=dag, params={},
+                                             task_id='first_task')
+                        ti = TaskInstance(task=task,
+                                          execution_date=datetime.now())
+                        result = task.execute(ti.get_template_context())
+                        self.assertEqual(result, "Pycon2018")
+            </code></pre>
+<aside class="notes">
+You need to do some setup by creating a mock DAG and a task.<br>
+But it does open the option that when your logic or your use case becomes complex where you need to create your own DAGs<br>
+You have the ability to create good unit tests around them.
+</aside>
+        </section>
+        <section>
+            <h4>Lesson 5 - Tests</h4>
+            <p>
+                Update the task that finds common names to use a custom operator<br>
+                Write unit tests for the operator<br><br>
+
+                <b>Instructions:</b><br>
+                Run tests in the worker container:<br> <b>docker exec -it pycon2018airflow_worker_1 sh</b><br><br>
+                <b>nose</b> and <b>pytests</b> are installed as part of the environment on the worker<br><br>
+                Run tests in the directory: <b>/usr/local/airflow/dags</b><br>
+            </p>
+<aside class="notes">
+    custom_operator.py<br>
+    test_custom_operator.py<br>
+</aside>
+        </section>
+        <section>
+            <h4>DAG Deployment</h4>
+            <ul>
+                <li>Synchronize across Components</li>
+                <li>Have in version control</li>
+            </ul>
+<aside class="notes">
+Scheduler, Web, Worker all need the same DAG directory. Deployment should be fast. We haven't seen issues but might be <br>
+good idea to pause the scheduler.<br>
+It is a good practice to have it in version control and deploy once tests passed.<br>
+</aside>
+        </section>
+        <section>
+            <h4>DAG Directory Structure</h4>
+            <ul>
+                <li>Subdirectories</li>
+                <li>Separate logic from DAGs</li>
+            </ul>
+<aside class="notes">
+Separate to subdirectory based on different parts of responsibility or systems.<br>
+For easier maintenance logic should leave either in separate directory or even different package.<br>
+You can put you custom operators in the same path as the DAGs or in plugins directory but then restart of the scheduler is needed.
+</aside>
+        </section>
+        <section>
+            <section>
+                <h4>More Airflow features</h4>
+                <aside class="notes">
+                    These are some features that make Airflow stand out (I think) to other workflow engines.<br>
+                </aside>
+            </section>
+            <section>
+                <h4>Plugins</h4>
+                <ul>
+                    <li>Operators</li>
+                    <li>Views(UI)</li>
+                </ul>
+                <aside class="notes">
+                    Plugins give you the ability to extend the core Airflow functionality.<br>
+                    We saw you can define your own operators, the right way to do it is part of a plugin<br>
+                    A hooks is how Airflow interacts with external resources and you can define your own<br>
+                    Macros are the variables we saw you can use in templates we saw<br>
+                    Defining your own views gives you the ability to extend the Airflow UI and it is just a Flask view<br>
+                </aside>
+            </section>
+            <section>
+                <h4>Xcom</h4>
+                <pre><code data-trim data-noescape>
+                    # inside a PythonOperator called 'pushing_task'
+                    def push_function():
+                        return value
+
+                    # inside another PythonOperator where provide_context=True
+                    def pull_function(**context):
+                        value = context['task_instance']
+                            .xcom_pull(task_ids='pushing_task')
+                </code></pre>
+                <aside class="notes">
+                    This is how you pass small pieces of data from one task to another<br>
+                    These should be variable you use in your code and for example files or DB tables<br>
+                    In the example you can see the returned value from a task is pushed by default but you can push<br>
+                    more values explicitly.
+                </aside>
+            </section>
+            <section>
+                <h4>Variables</h4>
+                <pre><code data-trim data-noescape>
+                    from airflow.models import Variable
+                    foo = Variable.get("foo")
+                    bar = Variable.get("bar", deserialize_json=True)
+                </code></pre>
+                <aside class="notes">
+                    You define variables using web ui or cli. Those are constants you can reference in your task.<br>
+                    One of the usages is testing.<br>
+                    Connections
+                </aside>
+            </section>
+        </section>
+        <section>
+            <h4>Airflow Summary</h4>
+            <div id="left">
+                <b></b>
+                <ul>
+                    <li>Many Features</li>
+                    <li>Robust</li>
+                    <li>Scalable</li>
+                </ul>
+            </div>
+            <div id="right">
+                <ul>
+                    <li>DAGs on schedule</li>
+                    <li>Limited on full DAG testing</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+    // More info https://github.com/hakimel/reveal.js#configuration
+    Reveal.initialize({
+        history: true,
+
+        // More info https://github.com/hakimel/reveal.js#dependencies
+        dependencies: [
+            {src: 'plugin/markdown/marked.js'},
+            {src: 'plugin/markdown/markdown.js'},
+            {src: 'plugin/notes/notes.js', async: true},
+            {
+                src: 'plugin/highlight/highlight.js', async: true, callback: function () {
+                    hljs.initHighlightingOnLoad();
+                }
+            }
+        ]
+    });
+</script>
+</body>
+</html>
