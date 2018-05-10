@@ -128,10 +128,10 @@ Like other workflow engines at the time, Luigi provides built-in support for Had
         <section>
             <h2>Nitty Gritty</h2>
             <ul>
-                <li>File-based</li>
-                <li>Visualiser Page</li>
-                <li>Scheduler and Workers</li>
                 <li>Object-Oriented Structure</li>
+                <li>File-based</li>
+                <li>Scheduler and Workers</li>
+                <li>Visualiser Page</li>
             </ul>
             <aside class="notes">
 Luigi uses files to trigger tasks and output data processing<br>
@@ -144,10 +144,10 @@ Tasks are specified using classes.<br>
         <section>
             <h2>Lesson 1</h2>
             <p>
-                <b>https://github.com/a-hacker/PyTN2018-Luigi</b>
+                <b>https://github.com/a-hacker/PyCon2018-Luigi</b>
                 <br><br>
                 Run the hello_world dag and check the central scheduler<br><br>
-                <b>Note</b>: Run your dag with docker exec pycon2018luigi_scheduler_1 python3 dags/hello_world.py &lt;HelloWorldTask&gt;
+                <b>Note</b>: Run your dag with docker exec pycon2018luigi_scheduler_1 python3 dags/hello_world.py HelloWorldTask
             </p>
         </section>
         <section>
@@ -184,7 +184,7 @@ Tasks are specified using classes.<br>
             <pre><code data-trim data-noescape>
                 class ExternalTaskClass(luigi.ExternalTask):
                     def output(self):
-                        return luigi.LocalTarget("external_file.txt")
+                        return luigi.LocalTarget("/my/external/file.txt")
             </code></pre>
         </section>
         <section>
@@ -238,7 +238,7 @@ Tasks are specified using classes.<br>
                 ...
                 class DownStreamTask(luigi.Task):
                     def requires(self):
-                        TaskClass(foo="baz")
+                        return TaskClass(foo="baz")
             </code></pre>
             <pre><code data-trim data-noescape>
                 python3 dagfile.py TaskClass --foo baz
@@ -265,7 +265,7 @@ Tasks are specified using classes.<br>
             <h2>Arbitrary number of dependencies</h2>
             <pre><code data-trim data-noescape>
                 class DownStreamTask(luigi.Task):
-                    dependencies = luigi.IntParameter(defaul=4)
+                    dependencies = luigi.IntParameter(default=4)
                     def requires(self):
                         return [TaskClass(x)
                             for x
@@ -296,7 +296,7 @@ Tasks are specified using classes.<br>
                     def requires(self):
                         return [TaskClass(foo="bar"),
                                 TaskClass(foo="baz")]
-                    def output(self):
+                    def run(self):
                         for dep in self.input():
                             with dep.open():
                                 ...
@@ -553,7 +553,7 @@ Other operators: Hive, Http (calls an endpoint), MySQL (runs a query), SlackPost
                 for i in range(5):
                     op_kwargs = {'task_num': i}
                     PythonOperator(
-                        task_id='task-num-' + i
+                        task_id='task-num-' + str(i)
                         <b>provide_context=True,</b>
                         <b>op_kwargs=op_kwargs</b>
                         python_callable=print_context,
